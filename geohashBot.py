@@ -10,7 +10,7 @@ class GeoHashBot(AdminableBot):
     def onLocationMessage(self,msg):
         day = datetime.date.today()
         lng,lat = msg.location.longitude,msg.location.latitude
-        self.caculateGeoHash(lat,lng,day).sendTo(msg.chat.id,msg.id)
+        return self.caculateGeoHash(lat,lng,day)
 
     def caculateGeoHash(self,lat,lng,day,scale=1):
         if lng >= -30: #30 WEST RULE
@@ -49,10 +49,12 @@ class GeoHashBot(AdminableBot):
                 else:
                     raise BadUserInputError("Day must be in YYYY-MM-DD format")
         if gratical is None:
+            #Here we must manually send the message so we can onReply it
             self.sendMessage(msg.chat.id,"Ok where are you at?",
                 replyingToId=msg.id,
                 replyMarkup={"force_reply":True,"selective":True}
             ).onReply(GeoLocationResponse(day))
+            return True
         else:
             try:
                 lat,lng = gratical.split(",",2)
@@ -61,7 +63,7 @@ class GeoHashBot(AdminableBot):
                 lat,lng = float(lat),float(lng)
             except (ValueError,TypeError) as e:
                 raise BadUserInputError("Gartical must be in format Lat,Lng With both numbers as decimals")
-            self.caculateGeoHash(lat,lng,day).sendTo(msg.chat.id,msg.id)
+            return self.caculateGeoHash(lat,lng,day)
 
 class GeoLocationResponse(AwaitResponse):
     def __init__(self,day):
@@ -69,8 +71,7 @@ class GeoLocationResponse(AwaitResponse):
         self.day = day
     def onLocationMessage(self,msg):
         lng,lat = msg.location.longitude,msg.location.latitude
-        msg._bot.caculateGeoHash(lat,lng,self.day).sendTo(msg.chat.id,msg.id)
-        return True
+        return msg._bot.caculateGeoHash(lat,lng,self.day)
 
 if __name__ == "__main__":
     import argparse
@@ -83,9 +84,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    level = getattr(logging,args.reportLevel.upper())
+    bot=GeoHashBot(token=args.token,verbose=args.verbose,adminId=args.adminId,reportLevel=args.reportLevel.upper())
     try:
-        bot=GeoHashBot(token=args.token,verbose=args.verbose,adminId=args.adminId,reportLevel=level)
         bot.handleMessages()
     except Exception as e:
         bot.logger.critical("Critical Error, the bot has gone down.",exc_info=true)

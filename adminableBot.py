@@ -7,30 +7,28 @@ from bot import *
 class AdminableBot(Bot):
     def __init__(self,adminId,reportLevel=logging.ERROR,**kwargs):
         super().__init__(**kwargs)
+        print("Admin's bot set to: {}".format(adminId))
         self.adminId = int(adminId)
         self.reporter = None
         if not adminId is None:
             self.reporter = ReportHandler(self,reportLevel)
             self.logger.addHandler(self.reporter)
 
-    def checkSecureAdmin(self,msg):
+    def isSecureAdmin(self,msg):
         if msg.frm.id == self.adminId:
             if msg.chat.id == self.adminId:
                 return True
             else:
-                self.sendMessage(msg.chat.id,"Admin commands only valid in private chat. @{}".format(self.me.username),
-                    replyingToId=msg.id
-                )
+                return "Admin commands only valid in private chat. @{}".format(self.me.username)
         else:
-            self.sendMessage(msg.chat.id,"You are not authorized to use admin controlls.", replyingToId=msg.id)
-        return False
+            return "You are not authorized to use admin controlls."
 
 
     def onCmd_adminhelp(self,msg):
-        if not self.checkSecureAdmin(msg): return True
-        self.sendMessage(msg.chat.id,"""Admin Commands:
-    /adminLevel [logLevel {critical,error,warning,info,debug}] - gets/set reporting debug level""",replyingToId=msg.id)
-        return True
+        secure = self.isSecureAdmin(msg)
+        if not secure is True: return secure
+        return """Admin Commands:
+    /adminLevel [logLevel {critical,error,warning,info,debug}] - gets/set reporting debug level"""
 
     def onCmd_adminlevel(self,msg,level=None):
         if level is None:
@@ -39,13 +37,11 @@ class AdminableBot(Bot):
                 cLevel = ["notset","debug","info","warning","error","critical"][cLevel//10]
             except (TypeError,IndexError):
                 pass
-            self.sendMessage(msg.chat.id,"Reporting level is {}".format(cLevel),replyingToId=msg.id)
-            return True
-        
-        if level.upper() in ["CRITICAL","ERROR","WARNING","INFO","DEBUG"]:
-            self.reporter.setLevel(getattr(logging,level))
-            self.sendMessage(msg.chat.id,"Level updated succesfully",replyingToId=msg.id)
-        else:
+            return "Reporting level is {}".format(cLevel)
+        try:
+            self.reporter.setLevel(level.upper())
+            return "Level updated succesfully"
+        except ValueError:
             raise BadUserInputError("{} is not a valid option, valid options are: critical, error, warning, info and debug".format(level))
         return True
 

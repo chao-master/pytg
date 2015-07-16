@@ -42,20 +42,30 @@ class Bot():
                 yield buffer.pop(0)["message"]
 
     def handleMessages(self):
+        def maybeReply(reply):
+            if reply is True: return True
+            if reply is False or reply is None: return False
+            try:
+                reply.sendTo(msg.chat.id,replyingToId=msg.id)
+            except AttributeError:
+                self.sendMessage(msg.chat.id,str(replyString),replyingToId=msg.id)
+            return True
+
         for msg in self.pendingMessages():
             try:
-                if msg.replyTo is not None:
+                #First see if the message is a response to one we send earlier
+                if not msg.replyTo is None:
                     handler = self.awaitingResponses.get(msg.replyTo.id,None)
                     if handler is not None:
-                        if self.verbose: print("message is response to earlier messge ",msg.replyTo.id)
-                        if getattr(handler,"on"+msg.__class__.__name__,handler.onGenericMessage)(msg):
-                            if self.verbose: print("message hadled by reply handler")
-                            del self.awaitingResponses[msg.replyTo.id]
-                            continue
+                        if maybeReply(getattr(handler,"on"+msg.__class__.__name__,handler.onGenericMessage)(msg)):
+                                del self.awaitingResponses[msg.replyTo.id]
+                                continue
+                #Then if it's a textMessage check the command handling system
                 if isinstance(msg,TextMessage):
-                    if self.checkCommands(msg):
+                    if maybeReply(self.checkCommands(msg)):
                         continue
-                getattr(self,"on"+msg.__class__.__name__,self.onGenericMessage)(msg)
+                #Finally if none of that worked call the handler for this message type
+                maybeReply(getattr(self,"on"+msg.__class__.__name__,self.onGenericMessage)(msg))
             except BadUserInputError as e:
                 self.logger.debug("Error on message {}:{}".format(msg,e))
                 self.sendMessage(msg.chat.id,"Error on message {}:{}".format(msg,e),replyingToId=msg.id)
