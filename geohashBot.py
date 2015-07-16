@@ -65,6 +65,7 @@ class GeoHashBot(Bot):
 
 class GeoLocationResponse(AwaitResponse):
     def __init__(self,day):
+        super().__init__()
         self.day = day
     def onLocationMessage(self,msg):
         lng,lat = msg.location.longitude,msg.location.latitude

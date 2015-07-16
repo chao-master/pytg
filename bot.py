@@ -3,6 +3,7 @@ import requests
 import re
 import inspect
 import traceback
+import time
 
 class Bot():
     def __init__(self,token,verbose=False):
@@ -20,6 +21,10 @@ class Bot():
         if self.verbose: print(r.text)
         return self.parseJson(r.text)
 
+    def clearAwaiting(self):
+        now = time.time()
+        self.awaitingResponses = {k:v for k,v in self.awaitingResponses if v.diesAt<now}
+
     def pendingMessages(self):
         buffer = []
         lastUpdate = None
@@ -28,6 +33,7 @@ class Bot():
                 d = self.fireRequest("getUpdates",{"timeout":60,"offset":lastUpdate})
                 if d["ok"]:
                     buffer = d["result"]
+                self.clearAwaiting()
             if buffer:
                 lastUpdate = buffer[0]["update_id"]+1
                 yield buffer.pop(0)["message"]
@@ -102,6 +108,8 @@ class BadUserInputError(Exception):
     pass
 
 class AwaitResponse():
+    def __init__(self):
+        self.diesAt = time.time()+60*60
     def onTextMessage(self,msg):
         return False
     def onAudioMessage(self,msg):
