@@ -15,7 +15,7 @@ class GeoHashBot(Bot):
         if lng >= -30: #30 WEST RULE
             dday = day - datetime.timedelta(1)
         else:
-            ddat = day
+            dday = day
         r=requests.get("http://geo.crox.net/djia/{day.year}/{day.month}/{day.day}".format(day=dday))
         dateDjia = day.strftime("%Y-%m-%d-").encode("ascii")+r.content
         djiaHash = hashlib.md5(dateDjia).hexdigest()
@@ -36,24 +36,37 @@ class GeoHashBot(Bot):
 
         return Location(_bot=self,latitude=nLat,longitude=nLng)
 
-    def onCmd_hash(self,msg,day=None):
-        print (repr(day))
-        replyHandler = GeoLocationResponse(day)
-        self.sendMessage(msg.chat.id,"Ok where are you at?",
-            replyingToId=msg.id,
-            replyMarkup={"force_reply":True,"selective":True}
-        ).onReply(replyHandler)
+    def onCmd_hash(self,msg,day=None,gratical=None):
+        if day is None:
+            day = datetime.date.today()
+        else:
+            try:
+                day = datetime.datetime.strptime(day,"%Y-%m-%d")
+            except ValueError:
+                if gratical is None:
+                    gratical,day = day,datetime.date.today()
+                else:
+                    raise BadUserInputError("Day must be in YYYY-MM-DD format")
+        if gratical is None:
+            replyHandler = GeoLocationResponse(day)
+            self.sendMessage(msg.chat.id,"Ok where are you at?",
+                replyingToId=msg.id,
+                replyMarkup={"force_reply":True,"selective":True}
+            ).onReply(replyHandler)
+        else:
+            try:
+                lat,lng = gratical.split(",",2)
+                if lat == "-0":lat=-0.01
+                if lng == "-0":lng=-0.01
+                lat,lng = float(lat),float(lng)
+            except (ValueError,TypeError) as e:
+                raise BadUserInputError("Gartical must be in format Lat,Lng With both numbers as decimals")
+            self.caculateGeoHash(lat,lng,day).sendTo(msg.chat.id,msg.id)
+
 
 class GeoLocationResponse(AwaitResponse):
     def __init__(self,day):
-        if day is None:
-            self.day = datetime.date.today()
-        else:
-            try:
-                self.day = datetime.datetime.strptime(day,"%Y-%m-%d")
-            except ValueError:
-                raise BadUserInputError("Day must be in YYYY-MM-DD format")
-
+        self.day = day
     def onLocationMessage(self,msg):
         lng,lat = msg.location.longitude,msg.location.latitude
         msg._bot.caculateGeoHash(lat,lng,self.day).sendTo(msg.chat.id,msg.id)
