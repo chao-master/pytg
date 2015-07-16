@@ -7,15 +7,15 @@ from bot import *
 class AdminableBot(Bot):
     def __init__(self,adminId,reportLevel=logging.ERROR,**kwargs):
         super().__init__(**kwargs)
-        self.adminId = adminId
+        self.adminId = int(adminId)
         self.reporter = None
         if not adminId is None:
             self.reporter = ReportHandler(self,reportLevel)
             self.logger.addHandler(self.reporter)
 
     def checkSecureAdmin(self,msg):
-        if msg.frm.id == adminId:
-            if msg.chat.id == adminId:
+        if msg.frm.id == self.adminId:
+            if msg.chat.id == self.adminId:
                 return True
             else:
                 self.sendMessage(msg.chat.id,"Admin commands only valid in private chat. @{}".format(self.me.username),
