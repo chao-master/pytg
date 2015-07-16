@@ -48,11 +48,10 @@ class GeoHashBot(Bot):
                 else:
                     raise BadUserInputError("Day must be in YYYY-MM-DD format")
         if gratical is None:
-            replyHandler = GeoLocationResponse(day)
             self.sendMessage(msg.chat.id,"Ok where are you at?",
                 replyingToId=msg.id,
                 replyMarkup={"force_reply":True,"selective":True}
-            ).onReply(replyHandler)
+            ).onReply(GeoLocationResponse(day))
         else:
             try:
                 lat,lng = gratical.split(",",2)
