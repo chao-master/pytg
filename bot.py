@@ -70,6 +70,7 @@ class Bot():
         commandName,named,botName = command.partition("@")
         if named and botName != self.me.username:
             return False
+        commandName = commandName.lower()
         def callGeneric(msg):
             if self.verbose: print("message hadled by generic command handler")
             self.onGenericCommand(msg,commandName,args)

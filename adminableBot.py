@@ -27,8 +27,28 @@ class AdminableBot(Bot):
 
 
     def onCmd_adminhelp(self,msg):
-        if not self.checkSecureAdmin(msg): return
-        self.sendMessage(msg.chat.id,"Admin Commands: (None)",replyingToId=msg.id)
+        if not self.checkSecureAdmin(msg): return True
+        self.sendMessage(msg.chat.id,"""Admin Commands:
+    /adminLevel [logLevel {critical,error,warning,info,debug}] - gets/set reporting debug level""",replyingToId=msg.id)
+        return True
+
+    def onCmd_adminlevel(self,msg,level=None):
+        if level is None:
+            cLevel = self.reporter.level
+            try:
+                cLevel = ["notset","debug","info","warning","error","critical"][cLevel//10]
+            except (TypeError,IndexError):
+                pass
+            self.sendMessage(msg.chat.id,"Reporting level is {}".format(cLevel),replyingToId=msg.id)
+            return True
+        
+        if level.upper() in ["CRITICAL","ERROR","WARNING","INFO","DEBUG"]:
+            self.reporter.setLevel(getattr(logging,level))
+            self.sendMessage(msg.chat.id,"Level updated succesfully",replyingToId=msg.id)
+        else:
+            raise BadUserInputError("{} is not a valid option, valid options are: critical, error, warning, info and debug".format(level))
+        return True
+
 
 class ReportHandler(logging.Handler):
     def __init__(self,bot,level):
