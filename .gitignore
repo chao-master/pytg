@@ -1,3 +1,6 @@
+#Bot run files (contain private tokens)
+run*Bot
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
