@@ -4,10 +4,13 @@ import re
 import inspect
 import traceback
 import time
+import logging
 
 class Bot():
     def __init__(self,token,verbose=False):
         self.token = token
+        self.logger = logging.getLogger(self.__class__.__name__+"."+hex(id(self))[2:])
+        self.logger.addHandler(logging.StreamHandler())
         self.awaitingResponses = {}
         self.verbose = verbose
         self.me = self.fireRequest("getMe")["result"]
@@ -23,7 +26,7 @@ class Bot():
 
     def clearAwaiting(self):
         now = time.time()
-        self.awaitingResponses = {k:v for k,v in self.awaitingResponses if v.diesAt<now}
+        self.awaitingResponses = {k:v for k,v in self.awaitingResponses.items() if v.diesAt<now}
 
     def pendingMessages(self):
         buffer = []
@@ -54,9 +57,10 @@ class Bot():
                         continue
                 getattr(self,"on"+msg.__class__.__name__,self.onGenericMessage)(msg)
             except BadUserInputError as e:
+                self.logger.debug("Error on message {}:{}".format(msg,e))
                 self.sendMessage(msg.chat.id,"Error on message {}:{}".format(msg,e),replyingToId=msg.id)
             except Exception as e:
-                traceback.print_exc()
+                self.logger.exception("Unknown Error handling message {}:{}".format(msg,e))
                 self.sendMessage(msg.chat.id,"Unknown Error handling message {}".format(msg),replyingToId=msg.id)
 
     def checkCommands(self,msg):

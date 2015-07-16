@@ -4,14 +4,15 @@ import math
 
 from objects import *
 from bot import *
+from adminableBot import *
 
-class GeoHashBot(Bot):
+class GeoHashBot(AdminableBot):
     def onLocationMessage(self,msg):
         day = datetime.date.today()
         lng,lat = msg.location.longitude,msg.location.latitude
         self.caculateGeoHash(lat,lng,day).sendTo(msg.chat.id,msg.id)
 
-    def caculateGeoHash(self,lat,lng,day):
+    def caculateGeoHash(self,lat,lng,day,scale=1):
         if lng >= -30: #30 WEST RULE
             dday = day - datetime.timedelta(1)
         else:
@@ -62,7 +63,6 @@ class GeoHashBot(Bot):
                 raise BadUserInputError("Gartical must be in format Lat,Lng With both numbers as decimals")
             self.caculateGeoHash(lat,lng,day).sendTo(msg.chat.id,msg.id)
 
-
 class GeoLocationResponse(AwaitResponse):
     def __init__(self,day):
         super().__init__()
@@ -77,6 +77,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("token",help="The Telegram bot's access token")
     parser.add_argument("-v","--verbose",help="Enable verbose bot output",action="store_true")
+    parser.add_argument("-a","--adminId",help="Admin's telegram id for debugging")
+    parser.add_argument("-r","--reportLevel",help="Level of logging to report to the admin via telegram, default: error",
+        choices=["critical","error","warning","info","debug"],default="error"
+    )
     args = parser.parse_args()
 
-    GeoHashBot(args.token,verbose=args.verbose).handleMessages()
+    level = getattr(logging,args.reportLevel.upper())
+    try:
+        bot=GeoHashBot(token=args.token,verbose=args.verbose,adminId=args.adminId,reportLevel=level)
+        bot.handleMessages()
+    except Exception as e:
+        bot.logger.critical("Critical Error, the bot has gone down.",exc_info=true)
