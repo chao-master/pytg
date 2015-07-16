@@ -28,9 +28,13 @@ class AdminableBot(Bot):
         secure = self.isSecureAdmin(msg)
         if not secure is True: return secure
         return """Admin Commands:
-    /adminLevel [logLevel {critical,error,warning,info,debug}] - gets/set reporting debug level"""
+    /adminLevel [logLevel {critical,error,warning,info,debug}] - gets/set reporting debug level
+    /adminMemory - Prints debug infomation about the bot's memory"""
 
     def onCmd_adminlevel(self,msg,level=None):
+        secure = self.isSecureAdmin(msg)
+        if not secure is True: return secure
+
         if level is None:
             cLevel = self.reporter.level
             try:
@@ -44,6 +48,17 @@ class AdminableBot(Bot):
         except ValueError:
             raise BadUserInputError("{} is not a valid option, valid options are: critical, error, warning, info and debug".format(level))
         return True
+
+    def onCmd_adminmemory(self,msg):
+        secure = self.isSecureAdmin(msg)
+        if not secure is True: return secure
+
+        return "Bot {}.{} has {} messages in storage awaiting a reply".format(
+            self.__class__.__name__,
+            hex(id(self))[2:],
+            len(self.awaitingResponses)
+        )
+
 
 
 class ReportHandler(logging.Handler):

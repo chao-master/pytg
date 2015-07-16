@@ -26,7 +26,7 @@ class Bot():
 
     def clearAwaiting(self):
         now = time.time()
-        self.awaitingResponses = {k:v for k,v in self.awaitingResponses.items() if v.diesAt<now}
+        self.awaitingResponses = {k:v for k,v in self.awaitingResponses.items() if v.diesAt>now}
 
     def pendingMessages(self):
         buffer = []
@@ -48,7 +48,7 @@ class Bot():
             try:
                 reply.sendTo(msg.chat.id,replyingToId=msg.id)
             except AttributeError:
-                self.sendMessage(msg.chat.id,str(replyString),replyingToId=msg.id)
+                self.sendMessage(msg.chat.id,str(reply),replyingToId=msg.id)
             return True
 
         for msg in self.pendingMessages():

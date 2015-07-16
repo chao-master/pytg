@@ -37,6 +37,9 @@ class GeoHashBot(AdminableBot):
 
         return Location(_bot=self,latitude=nLat,longitude=nLng)
 
+    def onCmd_start(self,msg):
+        return "To get started either send me your location or use /hash for a more refined search!"
+
     def onCmd_hash(self,msg,day=None,gratical=None):
         if day is None:
             day = datetime.date.today()
@@ -88,4 +91,4 @@ if __name__ == "__main__":
     try:
         bot.handleMessages()
     except Exception as e:
-        bot.logger.critical("Critical Error, the bot has gone down.",exc_info=true)
+        bot.logger.critical("Critical Error, the bot has gone down.",exc_info=True)
