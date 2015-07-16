@@ -107,7 +107,7 @@ class PhotoSize(TGobj):
             "caption":caption,
             "reply_to_message_id":replyingToId,
             "reply_markup":replyMarkup
-        })
+        })["result"]
 
 class Audio(TGobj):
     mapping = {
@@ -122,7 +122,7 @@ class Audio(TGobj):
             "audio":self.id,
             "reply_to_message_id":replyingToId,
             "reply_markup":replyMarkup
-        })
+        })["result"]
 
 class Sticker(TGobj):
     mapping = {
@@ -138,7 +138,7 @@ class Sticker(TGobj):
             "sticker":self.id,
             "reply_to_message_id":replyingToId,
             "reply_markup":replyMarkup
-        })
+        })["result"]
 
 
 class Video(TGobj):
@@ -158,7 +158,7 @@ class Video(TGobj):
             "video":self.id,
             "reply_to_message_id":replyingToId,
             "reply_markup":replyMarkup
-        })
+        })["result"]
 
 class Location(TGobj):
     mapping = {
@@ -172,7 +172,7 @@ class Location(TGobj):
             "longitude":self.longitude,
             "reply_to_message_id":replyingToId,
             "reply_markup":replyMarkup
-        })
+        })["result"]
 
 class UserProfilePhotos(TGobj):
     mapping = {
@@ -211,6 +211,13 @@ class Message(TGobj):
         "forward_date":("forwardDate",False,None),
         "reply_to_message":("replyTo",False,None)
     }
+    def onReply(self,responseHandler):
+        self._bot.awaitingResponses[self.id] = responseHandler
+    def __str__(self):
+        try:
+            return self.text
+        except AttributeError:
+            return "[{}]".format(self.__class__.__name__)
 
 class TextMessage(Message):
     mapping = {

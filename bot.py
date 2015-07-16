@@ -2,13 +2,15 @@ from objects import *
 import requests
 import re
 import inspect
+import traceback
 
 class Bot():
     def __init__(self,token,verbose=False):
         self.token = token
         self.awaitingResponses = {}
         self.verbose = verbose
-        self.me = self.fireRequest("getMe")
+        self.me = self.fireRequest("getMe")["result"]
+        print("Bot booted up succesfully, bot's username is",self.me.username)
 
     def parseJson(self,string):
         return TGobj.fromJson(self,string)
@@ -32,16 +34,24 @@ class Bot():
 
     def handleMessages(self):
         for msg in self.pendingMessages():
-            if msg.replyTo is not None:
-                handler = self.awaitingResponses.get(msg.replyTo.id,None)
-                if handler is not None:
-                    if getattr(handler,"on"+msg.__class__.__name__,handler.onGenericMessage)(msg):
-                        del self.awaitingResponses[msg.replyTo.id]
+            try:
+                if msg.replyTo is not None:
+                    handler = self.awaitingResponses.get(msg.replyTo.id,None)
+                    if handler is not None:
+                        if self.verbose: print("message is response to earlier messge ",msg.replyTo.id)
+                        if getattr(handler,"on"+msg.__class__.__name__,handler.onGenericMessage)(msg):
+                            if self.verbose: print("message hadled by reply handler")
+                            del self.awaitingResponses[msg.replyTo.id]
+                            continue
+                if isinstance(msg,TextMessage):
+                    if self.checkCommands(msg):
                         continue
-            if isinstance(msg,TextMessage):
-                if self.checkCommands(msg):
-                    continue
-            getattr(self,"on"+msg.__class__.__name__,self.onGenericMessage)(msg)
+                getattr(self,"on"+msg.__class__.__name__,self.onGenericMessage)(msg)
+            except BadUserInputError as e:
+                self.sendMessage(msg.chat.id,"Error on message {}:{}".format(msg,e),replyingToId=msg.id)
+            except Exception as e:
+                traceback.print_exc()
+                self.sendMessage(msg.chat.id,"Unknown Error handling message {}".format(msg),replyingToId=msg.id)
 
     def checkCommands(self,msg):
         if not msg.text.startswith("/"):
@@ -50,16 +60,27 @@ class Bot():
         commandName,named,botName = command.partition("@")
         if named and botName != self.me.username:
             return False
-        def callGeneric():
-            self.onGenericCommand(commandName,args)
+        def callGeneric(msg):
+            if self.verbose: print("message hadled by generic command handler")
+            self.onGenericCommand(msg,commandName,args)
         cmdFunc = getattr(self,"onCmd_"+commandName,callGeneric)
         nArgs = len(inspect.getargspec(cmdFunc).args)
-        if nArgs:
-            return cmdFunc(*args.split(" ",nArgs-1))
-        else:
-            return cmdFunc()
 
-    def onGenericCommand(self,commandName,args):
+        if nArgs>2 and args:
+            return cmdFunc(msg,*args.split(" ",nArgs-2))
+        else:
+            return cmdFunc(msg)
+
+    def sendMessage(self,chatId,message,disableWebPreview=False,replyingToId=None,replyMarkup=None):
+        return self.fireRequest("sendMessage",{
+            "chat_id":chatId,
+            "text":message,
+            "disable_web_page_preview":disableWebPreview,
+            "reply_to_message_id":replyingToId,
+            "reply_markup":replyMarkup
+        })["result"]
+
+    def onGenericCommand(self,msg,commandName,args):
         return False
     def onTextMessage(self,msg): pass
     def onAudioMessage(self,msg): pass
@@ -77,9 +98,10 @@ class Bot():
     def onGroupCreatedMessage(self,msg): pass
     def onGenericMessage(self,msg): pass
 
+class BadUserInputError(Exception):
+    pass
+
 class AwaitResponse():
-    def __init__(self,id,bot):
-        self.bot = bot
     def onTextMessage(self,msg):
         return False
     def onAudioMessage(self,msg):
