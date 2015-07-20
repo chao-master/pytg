@@ -57,6 +57,10 @@ class Bot():
                 if not msg.replyTo is None:
                     handler = self.awaitingResponses.get(msg.replyTo.id,None)
                     if handler is not None:
+                        if isinstance(msg,TextMessage):
+                            if maybeReply(Bot.checCommands(handler,msg)):
+                                del self.awaitingResponses[msg.replyTo.id]
+                                continue
                         if maybeReply(getattr(handler,"on"+msg.__class__.__name__,handler.onGenericMessage)(msg)):
                                 del self.awaitingResponses[msg.replyTo.id]
                                 continue
